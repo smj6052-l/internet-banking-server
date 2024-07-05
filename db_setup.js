@@ -17,7 +17,7 @@ const setup = async () => {
       database: process.env.MYSQL_DB,
     });
     mysqldb.connect();
-
+    console.log("db 접속 성공");
     return { mysqldb };
   } catch (err) {
     console.log("db 접속 실패");
