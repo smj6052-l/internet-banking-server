@@ -23,11 +23,13 @@ router.post("/check-id", async (req, res) => {
   try {
     const isAvailable = await checkId(mysqldb, client_id);
     if (!isAvailable) {
-      return res.status(400).json({ message: "User ID already exists" });
+      return res.status(409).json({ message: "이미 사용 중인 아이디입니다." });
     }
-    return res.status(200).json({ message: "User ID is available" });
+    return res.status(200).json({ message: "사용 가능한 아이디입니다." });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: "서버 에러가 발생했습니다. 잠시 후 다시 시도해주세요.",
+    });
   }
 });
 
@@ -92,6 +94,10 @@ router.post("/send-verification-code", async (req, res) => {
 router.post("/verify-email-code", (req, res) => {
   const { verificationCode } = req.body;
   const sessionVerificationCode = req.session.verificationCode;
+  console.log(
+    "🚀 ~ router.post ~ sessionVerificationCode:",
+    sessionVerificationCode
+  );
 
   if (verifyEmailCode(sessionVerificationCode, verificationCode)) {
     req.session.verificationCode = null; // 인증 코드 사용 후 무효화
