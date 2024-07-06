@@ -3,6 +3,8 @@ const bodyParser = require("body-parser");
 const dotenv = require("dotenv").config();
 const signupRouter = require("./routes/signup");
 const loginRouter = require("./routes/login");
+const accountRouter = require("./routes/account"); 
+const invitationRouter = require("./routes/invitation");
 const setupDB = require("./db_setup");
 const session = require("express-session");
 const multer = require("multer");
@@ -75,6 +77,8 @@ setupDB()
 
     app.use("/signup", signupRouter);
     app.use("/login", loginRouter);
+    app.use("/account", accountRouter);
+    app.use("/invitation", invitationRouter);
 
     https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
