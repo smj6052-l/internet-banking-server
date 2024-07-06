@@ -1,6 +1,9 @@
 const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
 
-async function sendEmail(to, subject, text) {
+dotenv.config();
+
+async function sendEmail(to, subject, text, html) {
   const transporter = nodemailer.createTransport({
     host: "smtp.naver.com",
     port: 587,
@@ -16,6 +19,7 @@ async function sendEmail(to, subject, text) {
     to: to,
     subject: subject,
     text: text,
+    html: html,
   };
 
   try {
