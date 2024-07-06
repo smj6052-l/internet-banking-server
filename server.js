@@ -4,10 +4,18 @@ const dotenv = require("dotenv").config();
 const signupRouter = require("./routes/signup");
 const loginRouter = require("./routes/login");
 const setupDB = require("./db_setup");
-const cors = require("cors");
 const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
+const cors = require("cors");
+// https 설정
+const https = require("https");
+const fs = require("fs");
+// SSL 인증서와 키 파일 읽기
+const options = {
+  key: fs.readFileSync("server.key"),
+  cert: fs.readFileSync("server.cert"),
+};
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -38,6 +46,28 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // 파일 업로드 미들웨어 설정
 app.use(upload.single("client_photo"));
 
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET_KEY,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      domain: "localhost",
+      path: "/",
+      httpOnly: true,
+      sameSite: "None",
+      maxAge: 5400000,
+      secure: true,
+    },
+  })
+);
+const corsOptions = {
+  origin: "https://localhost:5173",
+  methods: ["GET", "POST", "OPTIONS"],
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
 // DB 초기화 완료 후 서버 가동
 setupDB()
   .then(({ mysqldb }) => {
@@ -46,7 +76,7 @@ setupDB()
     app.use("/signup", signupRouter);
     app.use("/login", loginRouter);
 
-    app.listen(PORT, () => {
+    https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   })
