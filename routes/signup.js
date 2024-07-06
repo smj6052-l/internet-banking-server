@@ -81,10 +81,12 @@ router.post("/send-verification-code", async (req, res) => {
   try {
     await sendEmail(client_email, subject, text);
     req.session.verificationCode = verificationCode;
-    return res.status(200).json({ message: "Verification code sent" });
+    return res
+      .status(200)
+      .json({ message: "입력하신 이메일로 인증코드가 전송되었습니다." });
   } catch (error) {
     return res.status(500).json({
-      message: "Failed to send verification code",
+      message: "인증코드 전송에 실패하였습니다. 다시 시도해주세요.",
       error: error.message,
     });
   }
@@ -94,16 +96,12 @@ router.post("/send-verification-code", async (req, res) => {
 router.post("/verify-email-code", (req, res) => {
   const { verificationCode } = req.body;
   const sessionVerificationCode = req.session.verificationCode;
-  console.log(
-    "🚀 ~ router.post ~ sessionVerificationCode:",
-    sessionVerificationCode
-  );
 
   if (verifyEmailCode(sessionVerificationCode, verificationCode)) {
     req.session.verificationCode = null; // 인증 코드 사용 후 무효화
-    return res.status(200).json({ message: "Email verified successfully" });
+    return res.status(200).json({ message: "이메일 인증이 완료되었습니다." });
   } else {
-    return res.status(400).json({ message: "Invalid verification code" });
+    return res.status(400).json({ message: "인증코드를 다시 확인해주세요." });
   }
 });
 
@@ -139,18 +137,12 @@ router.post("/", async (req, res) => {
   const {
     client_id,
     client_name,
-    password,
-    password_confirmation,
+    client_pw,
     client_email,
     client_phone,
     client_address,
     client_resi,
   } = req.body;
-
-  // 비밀번호 확인
-  if (password !== password_confirmation) {
-    return res.status(400).json({ message: "Passwords do not match" });
-  }
 
   // 이메일 인증 확인
   if (req.session.verificationCode) {
@@ -163,7 +155,7 @@ router.post("/", async (req, res) => {
   }
 
   // 비밀번호 해시
-  const hashedPassword = hashPassword(password);
+  const hashedPassword = hashPassword(client_pw);
 
   // 프로필 사진 처리
   let client_photo = null;
@@ -190,10 +182,12 @@ router.post("/", async (req, res) => {
       ]
     );
 
+    // 이메일 인증 코드 초기화
+    req.session.verificationCode = "";
     // 캡챠 인증 상태 초기화
     req.session.captchaVerified = false;
 
-    return res.status(200).json({ message: "User registered successfully" });
+    return res.status(200).json({ message: "회원가입 완료" });
   } catch (error) {
     return res
       .status(500)
