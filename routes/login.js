@@ -58,7 +58,7 @@ router.post("/", async (req, res) => {
     // 계정이 잠금 상태인지 확인
     if (client.client_locked) {
       return res.status(403).json({
-        message: "계정이 잠겨 있습니다. 지점을 방문하세요.",
+        message: "계정이 잠겨 있습니다. 가까운 영업점을 방문하세요.",
       });
     }
 
@@ -80,7 +80,14 @@ router.post("/", async (req, res) => {
           [loginAttempts, locked, client_id]
         );
 
-      return res.status(400).json({ message: "로그인 실패" });
+      // 계정이 잠긴 경우 영업점 방문 메시지 반환
+      if (locked) {
+        return res.status(403).json({
+          message: "5회 이상 로그인 실패. 가까운 영업점을 방문하세요.",
+        });
+      } else {
+        return res.status(400).json({ message: "로그인 실패" });
+      }
     }
 
     // 로그인 성공, 로그인 시도 횟수 초기화
