@@ -7,14 +7,6 @@ const { body, param, validationResult } = require("express-validator");
 
 dotenv.config();
 
-// 데이터베이스 연결 설정
-const dbConfig = {
-  host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DB,
-};
-
 // 계좌 번호 생성 함수 (33??-??-??????) 형식
 async function generateAccountNumber(connection) {
   let account_number;
@@ -160,26 +152,34 @@ router.post(
   }
 );
 
-// 로그인된 사용자의 계좌 목록
+// GET: 로그인된 사용자의 계좌 목록
 router.get("/", async (req, res) => {
-  // const client_pk = req.session.user.client_pk;
-  const client_pk = req.query.client_pk;
+  const mysqldb = req.app.get("mysqldb");
+  const client_pk = req.session.client.client_pk;
+  const client_name = req.session.client.client_name;
+
+  let connection;
   try {
-    const connection = await mysql.createConnection(dbConfig);
-    const [rows] = await connection.execute(
-      "SELECT account_name, account_balance, account_number FROM Account WHERE client_pk = ?",
-      [client_pk]
-    );
-    // 조회 목록: 계좌 별칭, 잔액 , 계좌 번호
-    const [user] = await connection.execute(
-      "SELECT client_name FROM Client WHERE client_pk = ?",
-      [client_pk]
-    ); // 사용자 이름 조회
-    await connection.end();
-    res.json({ client: user[0], accounts: rows });
+    // 연결 풀에서 연결 가져오기
+    mysqldb.connect();
+
+    // 조회 목록: 계좌 별칭, 잔액, 계좌 번호
+    const [accountInfo] = await mysqldb
+      .promise()
+      .query(
+        "SELECT account_pk, account_name, account_balance, account_number FROM Account WHERE client_pk = ?",
+        [client_pk]
+      );
+
+    res.json({ client: client_name, accounts: accountInfo });
   } catch (error) {
     console.error("계좌 조회 오류:", error);
     res.status(500).json({ error: "내부 서버 오류" });
+  } finally {
+    if (connection) {
+      // 연결 반환
+      await connection.release();
+    }
   }
 });
 
