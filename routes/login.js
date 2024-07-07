@@ -105,6 +105,15 @@ router.post("/", async (req, res) => {
     return res
       .status(500)
       .json({ message: "내부 서버 오류", error: error.message });
+  } finally {
+    // 로그인 성공여부와 상관없이 불필요한 세션 삭제
+    // 로그인 실패시
+    if (req.session && !req.session.client_id) {
+      req.session.destroy();
+    } else {
+      // 로그인 성공시
+      delete req.session.captchaVerified;
+    }
   }
 });
 
