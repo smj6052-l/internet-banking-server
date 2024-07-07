@@ -120,12 +120,6 @@ router.post("/", async (req, res) => {
   // 비밀번호 해시
   const hashedPassword = hashPassword(client_pw);
 
-  // 프로필 사진 처리
-  let client_photo = null;
-  if (req.file) {
-    client_photo = req.file.buffer; // 파일을 BLOB으로 저장
-  }
-
   const mysqldb = req.app.get("mysqldb");
 
   // 주민등록번호와 전화번호 중복 체크 후, 단순 에러 메시지 반환
@@ -144,8 +138,8 @@ router.post("/", async (req, res) => {
 
     // 새로운 사용자 정보 삽입
     await mysqldb.promise().query(
-      `INSERT INTO Client (client_id, client_name, client_pw, client_email, client_phone, client_address, client_resi, client_photo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO Client (client_id, client_name, client_pw, client_email, client_phone, client_address, client_resi)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         client_id,
         client_name,
@@ -154,7 +148,6 @@ router.post("/", async (req, res) => {
         client_phone,
         client_address,
         client_resi,
-        client_photo,
       ]
     );
 
