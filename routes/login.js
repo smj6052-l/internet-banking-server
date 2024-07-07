@@ -98,8 +98,14 @@ router.post("/", async (req, res) => {
         [client_id]
       );
 
-    // 세션 생성 또는 토큰 발급 등 로그인 처리
-    req.session.client_id = client.client_id; // 예시로 세션에 사용자 ID 저장
+    // 사용자 세션 생성
+    if (!req.session.client) {
+      req.session.client = {};
+    }
+    req.session.client.client_pk = client.client_pk;
+    req.session.client.client_id = client.client_id;
+    req.session.client.client_pw = client.client_pw;
+
     return res.status(200).json({ message: "로그인 성공" });
   } catch (error) {
     return res
@@ -108,7 +114,7 @@ router.post("/", async (req, res) => {
   } finally {
     // 로그인 성공여부와 상관없이 불필요한 세션 삭제
     // 로그인 실패시
-    if (req.session && !req.session.client_id) {
+    if (req.session && !req.session.client.client_pk) {
       req.session.destroy();
     } else {
       // 로그인 성공시
