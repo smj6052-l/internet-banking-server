@@ -75,13 +75,11 @@ app.use(cors(corsOptions));
 setupDB()
   .then(({ mysqldb }) => {
     app.set("mysqldb", mysqldb);
-
     app.use("/signup", signupRouter);
     app.use("/login", loginRouter);
     app.use("/account", accountRouter);
     app.use("/invitation", invitationRouter);
     app.use("/account/:id/transactions", transactionRouter);
-
     https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
