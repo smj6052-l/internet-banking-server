@@ -75,7 +75,7 @@ router.post("/transfer", async (req, res) => {
       mysqldb
     );
     if (!destinationAccount) {
-      return res.status(400).json({ error: "목적지 계좌를 찾을 수 없습니다." });
+      return res.status(404).json({ error: "목적지 계좌를 찾을 수 없습니다." });
     }
     // 원본 계좌와 목적지 계좌 정보 가져오기
     const originAccount = await validateAccount(
@@ -264,8 +264,8 @@ router.post("/import", async (req, res) => {
 });
 
 // 입출금 거래 내역 상세 확인
-router.get("/:transactionId", async (req, res) => {
-  const { id, transactionId } = req.params;
+router.get("/:accountId/:transactionId", async (req, res) => {
+  const { accountId, transactionId } = req.params;
   const mysqldb = req.app.get("mysqldb");
 
   try {
@@ -273,7 +273,7 @@ router.get("/:transactionId", async (req, res) => {
       .promise()
       .query(
         "SELECT * FROM TransactionHistory WHERE transaction_pk = ? AND (transaction_origin = ? OR transaction_destination = ?)",
-        [transactionId, id, id]
+        [transactionId, accountId, accountId]
       );
 
     if (results.length === 0) {
@@ -287,8 +287,8 @@ router.get("/:transactionId", async (req, res) => {
 });
 
 // 입출금 내역 확인
-router.get("/", async (req, res) => {
-  const { id } = req.params;
+router.get("/:accountId", async (req, res) => {
+  const { accountId } = req.params;
   const mysqldb = req.app.get("mysqldb");
 
   try {
@@ -296,7 +296,7 @@ router.get("/", async (req, res) => {
       .promise()
       .query(
         "SELECT * FROM TransactionHistory WHERE transaction_origin = ? OR transaction_destination = ? ORDER BY transaction_date DESC",
-        [id, id]
+        [accountId, accountId]
       );
 
     res.status(200).json(results);

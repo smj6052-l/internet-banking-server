@@ -62,7 +62,7 @@ setupDB()
     app.use("/account", accountRouter);
     app.use("/invitation", invitationRouter);
     app.use("/group-account", groupaccountRouter);
-    app.use("/account/:id/transactions", transactionRouter);
+    app.use("/transaction", transactionRouter);
     app.use("/profile", profileRouter); // 추가된 라우트
     https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
