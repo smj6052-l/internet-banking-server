@@ -11,6 +11,7 @@ const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
 const cors = require("cors");
+const uuid = require("uuid");
 // https 설정
 const https = require("https");
 const fs = require("fs");
@@ -73,8 +74,9 @@ app.use(cors(corsOptions));
 
 // DB 초기화 완료 후 서버 가동
 setupDB()
-  .then(({ mysqldb }) => {
+  .then(({ mysqldb, saltDB }) => {
     app.set("mysqldb", mysqldb);
+    app.set("saltDB", saltDB);
     app.use("/signup", signupRouter);
     app.use("/login", loginRouter);
     app.use("/account", accountRouter);
