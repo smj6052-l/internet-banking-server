@@ -122,37 +122,4 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 로그인된 사용자의 특정 계좌 정보 조회
-router.get(
-  "/:accountId",
-  [param("accountId").isInt().withMessage("유효하지 않은 계좌 ID입니다")],
-  async (req, res) => {
-    const { accountId } = req.params;
-    const client_pk = req.session.user.client_pk;
-
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    try {
-      const connection = await mysql.createConnection(dbConfig);
-      const [rows] = await connection.execute(
-        "SELECT account_name, account_balance, account_number FROM Account WHERE account_pk = ? AND client_pk = ?",
-        [accountId, client_pk]
-      );
-      // 조회 목록: 계좌 별칭, 잔액 , 계좌 번호
-      await connection.end();
-
-      if (rows.length === 0) {
-        return res.status(404).json({ error: "계좌를 찾을 수 없습니다" });
-      }
-      res.json({ account: rows[0] });
-    } catch (error) {
-      console.error("계좌 조회 오류:", error);
-      res.status(500).json({ error: "내부 서버 오류" });
-    }
-  }
-);
-
 module.exports = router;
