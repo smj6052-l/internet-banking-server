@@ -151,8 +151,8 @@ router.post("/", async (req, res) => {
     }
 
     // 솔트 생성 및 아이디, 비밀번호 해싱
-    const hashedClientId = await bcrypt.hash(client_id, saltRounds);
     const salt = generateSalt();
+    const Ssalt = generateSalt();
     const hashedPassword = hashPassword(client_pw, salt);
 
     // 새로운 사용자 정보 삽입
@@ -160,7 +160,7 @@ router.post("/", async (req, res) => {
       `INSERT INTO Client (client_id, client_name, client_pw, client_email, client_phone, client_address, client_resi)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        hashedClientId,
+        client_id,
         client_name,
         hashedPassword,
         client_email,
@@ -174,8 +174,15 @@ router.post("/", async (req, res) => {
     await saltDB
       .promise()
       .query("INSERT INTO ClientPwSalt (client_id, pwSalt) VALUES (?, ?)", [
-        hashedClientId,
+        client_id,
         salt,
+      ]);
+
+    await saltDB
+      .promise()
+      .query("INSERT INTO SessionSalt (client_id, Ssalt) VALUES (?, ?)", [
+        client_id,
+        Ssalt,
       ]);
 
     // 세션 및 쿠키 삭제
