@@ -6,15 +6,18 @@ const loginRouter = require("./routes/login");
 const accountRouter = require("./routes/account");
 const invitationRouter = require("./routes/invitation");
 const transactionRouter = require("./routes/transaction");
+const groupaccountRouter = require("./routes/group-account");
+const profileRouter = require("./routes/profile"); // 추가된 라우트
 const setupDB = require("./db_setup");
 const session = require("express-session");
-const multer = require("multer");
+
 const path = require("path");
 const cors = require("cors");
-const uuid = require("uuid");
+
 // https 설정
 const https = require("https");
 const fs = require("fs");
+
 // SSL 인증서와 키 파일 읽기
 const options = {
   key: fs.readFileSync("server.key"),
@@ -24,31 +27,8 @@ const options = {
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// 파일 업로드 설정
-const storage = multer.memoryStorage(); // 메모리 저장소 사용
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 이하로 제한
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
-    const extname = filetypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = filetypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error("Only .png, .jpeg, .jpg format allowed!"));
-    }
-  },
-});
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// 파일 업로드 미들웨어 설정
-app.use(upload.single("client_photo"));
 
 app.use(
   session({
@@ -81,7 +61,9 @@ setupDB()
     app.use("/login", loginRouter);
     app.use("/account", accountRouter);
     app.use("/invitation", invitationRouter);
+    app.use("/group-account", groupaccountRouter);
     app.use("/account/:id/transactions", transactionRouter);
+    app.use("/profile", profileRouter); // 추가된 라우트
     https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
