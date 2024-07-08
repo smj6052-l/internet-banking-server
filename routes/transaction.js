@@ -54,6 +54,7 @@ router.post("/transfer", async (req, res) => {
     transaction_destination_memo,
     account_pw,
   } = req.body;
+
   const mysqldb = req.app.get("mysqldb");
 
   if (!mysqldb) {
@@ -123,7 +124,7 @@ router.post("/transfer", async (req, res) => {
       .promise()
       .query(insertOriginTransactionQuery, [
         `To ${destinationAccount.account_name}`,
-        "Transfer",
+        "출금",
         -transaction_amount,
         originNewBalance,
         originAccount.account_pk,
@@ -139,7 +140,7 @@ router.post("/transfer", async (req, res) => {
       .promise()
       .query(insertDestinationTransactionQuery, [
         `From ${originAccount.account_name}`,
-        "Transfer",
+        "입금",
         transaction_amount,
         destinationNewBalance,
         originAccount.account_pk,
@@ -229,7 +230,7 @@ router.post("/import", async (req, res) => {
       .promise()
       .query(insertOriginTransactionQuery, [
         `To ${destinationAccount.account_name}`,
-        "Import",
+        "출금",
         -amount,
         originNewBalance,
         originAccount.account_pk,
@@ -244,7 +245,7 @@ router.post("/import", async (req, res) => {
       .promise()
       .query(insertDestinationTransactionQuery, [
         `From ${originAccount.account_name}`,
-        "Import",
+        "입금",
         amount,
         destinationNewBalance,
         originAccount.account_pk,
@@ -296,12 +297,16 @@ router.get("/:accountId", async (req, res) => {
     const [results] = await mysqldb.promise().query(
       `
         SELECT th.*
-        FROM TransactionHistory th
-        JOIN Account a ON th.transaction_origin = a.account_pk OR th.transaction_destination = a.account_pk
-        WHERE a.account_pk = ? AND a.client_pk = ?
-        ORDER BY th.transaction_date DESC
+          FROM TransactionHistory th
+          JOIN Account a ON (
+                  (th.transaction_type = '출금' AND th.transaction_origin = a.account_pk)
+                    OR 
+                    (th.transaction_type = '입금' AND th.transaction_destination = a.account_pk)
+                    )
+                    WHERE a.account_pk = ?
+                    ORDER BY th.transaction_date DESC;
         `,
-      [accountId, client_pk]
+      [accountId]
     );
 
     res.status(200).json(results);
