@@ -464,15 +464,15 @@ router.post("/:transactionId/memo/enter", async (req, res) => {
 
 // 메모 삭제
 router.post("/:transactionId/memo/delete", async (req, res) => {
-  const { id, transactionId } = req.params;
+  const { transactionId } = req.params;
   const mysqldb = req.app.get("mysqldb");
 
   try {
     await mysqldb
       .promise()
       .query(
-        "UPDATE TransactionHistory SET transaction_memo = NULL WHERE transaction_pk = ? AND (transaction_origin = ? OR transaction_destination = ?)",
-        [transactionId, id, id]
+        "UPDATE TransactionHistory SET transaction_memo = NULL WHERE transaction_pk = ? ",
+        [transactionId]
       );
 
     res.status(200).json({ message: "메모가 성공적으로 삭제되었습니다." });
@@ -483,7 +483,7 @@ router.post("/:transactionId/memo/delete", async (req, res) => {
 
 // 메모 업데이트
 router.post("/:transactionId/memo/update", async (req, res) => {
-  const { id, transactionId } = req.params;
+  const { transactionId } = req.params;
   const { transaction_memo } = req.body;
   const mysqldb = req.app.get("mysqldb");
 
@@ -491,10 +491,10 @@ router.post("/:transactionId/memo/update", async (req, res) => {
     await mysqldb
       .promise()
       .query(
-        "UPDATE TransactionHistory SET transaction_memo = ? WHERE transaction_pk = ? AND (transaction_origin = ? OR transaction_destination = ?)",
-        [transaction_memo, transactionId, id, id]
+        "UPDATE TransactionHistory SET transaction_memo = ? WHERE transaction_pk = ?",
+        [transaction_memo, transactionId]
       );
-
+    
     res.status(200).json({ message: "메모가 성공적으로 업데이트되었습니다." });
   } catch (err) {
     res.status(500).json({ error: err.message });
