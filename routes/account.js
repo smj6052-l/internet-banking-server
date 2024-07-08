@@ -106,7 +106,7 @@ router.get("/", async (req, res) => {
     const [accountInfo] = await mysqldb
       .promise()
       .query(
-        "SELECT account_pk, account_name, account_balance, account_number FROM Account WHERE client_pk = ?",
+        "SELECT account_pk, account_name, account_type, account_balance, account_number FROM Account WHERE client_pk = ?",
         [client_pk]
       );
 
