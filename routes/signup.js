@@ -1,12 +1,20 @@
 const express = require("express");
 const sha256 = require("sha256");
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const { sendEmail } = require("../utils/email");
 const { checkId, verifyEmailCode } = require("../utils/validation");
 const router = express.Router();
 const axios = require("axios");
-// 비밀번호 해싱 함수
-const hashPassword = (password) => {
-  return sha256(password);
+const saltRounds = 10;
+// 비밀번호 해싱 함수 (솔트 추가)
+const hashPassword = (password, salt) => {
+  return sha256(password + salt);
+};
+
+// 솔트 생성 함수
+const generateSalt = () => {
+  return crypto.randomBytes(16).toString("hex");
 };
 
 // 중복 사용자 ID 체크
@@ -21,6 +29,7 @@ router.post("/check-id", async (req, res) => {
     }
     return res.status(200).json({ message: "사용 가능한 아이디입니다." });
   } catch (error) {
+    console.error("Error checking ID:", error);
     return res.status(500).json({
       message: "서버 에러가 발생했습니다. 잠시 후 다시 시도해주세요.",
     });
@@ -34,15 +43,16 @@ router.post("/send-verification-code", async (req, res) => {
     100000 + Math.random() * 900000
   ).toString();
   const subject = "이메일 인증 코드";
-  const text = `인증 코드는 ${verificationCode} 입니다.`;
+  const text = `인증 코드는 [${verificationCode}] 입니다.`;
 
   try {
-    await sendEmail(client_email, subject, text);
+    await sendEmail(client_email, subject, text, null);
     req.session.verificationCode = verificationCode;
     return res
       .status(200)
       .json({ message: "입력하신 이메일로 인증코드가 전송되었습니다." });
   } catch (error) {
+    console.error("Error sending verification code:", error);
     return res.status(500).json({
       message: "인증코드 전송에 실패하였습니다. 다시 시도해주세요.",
       error: error.message,
@@ -56,7 +66,7 @@ router.post("/verify-email-code", (req, res) => {
   const sessionVerificationCode = req.session.verificationCode;
 
   if (verifyEmailCode(sessionVerificationCode, verificationCode)) {
-    req.session.verificationCode = null; // 인증 코드 사용 후 무효화
+    // req.session.verificationCode = null; // 인증 코드 사용 후 무효화
     return res.status(200).json({ message: "이메일 인증이 완료되었습니다." });
   } else {
     return res.status(400).json({ message: "인증코드를 다시 확인해주세요." });
@@ -80,10 +90,10 @@ router.post("/verify-captcha", async (req, res) => {
         error: data["error-codes"],
       });
     }
-
     req.session.captchaVerified = true; // 캡챠 인증 성공 표시
     return res.status(200).json({ message: "캡챠 인증에 성공하였습니다." });
   } catch (error) {
+    console.error("Error verifying captcha:", error);
     return res.status(500).json({
       message: "캡챠 인증 오류가 발생하였습니다.",
       error: error.message,
@@ -104,7 +114,7 @@ router.post("/", async (req, res) => {
   } = req.body;
 
   // 이메일 인증 확인
-  if (req.session.verificationCode) {
+  if (!req.session.verificationCode) {
     return res
       .status(400)
       .json({ message: "이메일 인증이 완료되지 않았습니다." });
@@ -117,12 +127,9 @@ router.post("/", async (req, res) => {
       .json({ message: "캡챠 인증이 완료되지 않았습니다." });
   }
 
-  // 비밀번호 해시
-  const hashedPassword = hashPassword(client_pw);
-
   const mysqldb = req.app.get("mysqldb");
+  const saltDB = req.app.get("saltDB");
 
-  // 주민등록번호와 전화번호 중복 체크 후, 단순 에러 메시지 반환
   try {
     // 중복 주민등록번호와 전화번호 체크
     const [rows] = await mysqldb
@@ -133,15 +140,27 @@ router.post("/", async (req, res) => {
       );
 
     if (rows.length > 0) {
-      return res.status(400).json({ message: "회원가입에 실패했습니다." });
+      req.session.destroy((err) => {
+        if (err) {
+          console.log("세션 삭제 실패:", err);
+        }
+        res.clearCookie("connect.sid");
+        return res.status(400).json({ message: "회원가입에 실패했습니다." });
+      });
+      return; // 세션 삭제가 비동기이므로 return으로 응답이 이미 전송되었음을 표시합니다.
     }
+
+    // 솔트 생성 및 아이디, 비밀번호 해싱
+    const hashedClientId = await bcrypt.hash(client_id, saltRounds);
+    const salt = generateSalt();
+    const hashedPassword = hashPassword(client_pw, salt);
 
     // 새로운 사용자 정보 삽입
     await mysqldb.promise().query(
       `INSERT INTO Client (client_id, client_name, client_pw, client_email, client_phone, client_address, client_resi)
         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        client_id,
+        hashedClientId,
         client_name,
         hashedPassword,
         client_email,
@@ -151,13 +170,25 @@ router.post("/", async (req, res) => {
       ]
     );
 
-    // 이메일 인증 코드 초기화
-    req.session.verificationCode = "";
-    // 캡챴 인증 상태 초기화
-    req.session.captchaVerified = false;
+    // 솔트 정보 삽입
+    await saltDB
+      .promise()
+      .query("INSERT INTO ClientPwSalt (client_id, pwSalt) VALUES (?, ?)", [
+        hashedClientId,
+        salt,
+      ]);
 
-    return res.status(200).json({ message: "회원가입이 완료되었습니다." });
+    // 세션 및 쿠키 삭제
+    req.session.destroy((err) => {
+      if (err) {
+        console.log("세션 삭제 실패:", err);
+        return res.status(500).json({ message: "세션 삭제에 실패했습니다." });
+      }
+      res.clearCookie("connect.sid");
+      return res.status(200).json({ message: "회원가입이 완료되었습니다." });
+    });
   } catch (error) {
+    console.error("Error during registration:", error);
     return res.status(500).json({
       message: "내부 서버 오류가 발생했습니다.",
       error: error.message,
