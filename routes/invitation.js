@@ -4,15 +4,8 @@ const mysql = require("mysql2/promise");
 const { body, validationResult } = require("express-validator");
 const { v4: uuidv4 } = require("uuid");
 const { sendEmail } = require("../utils/email");
+const { isAuthenticated } = require("../utils/is-authenticated");
 // const dbConfig = require('../config/database');
-
-function isAuthenticated(req, res, next) {
-  if (req.session && req.session.user) {
-    return next();
-  } else {
-    return res.status(401).json({ error: "로그인 해주세요" });
-  }
-}
 
 // 모임통장 초대
 router.post(
