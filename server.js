@@ -6,6 +6,7 @@ const loginRouter = require("./routes/login");
 const accountRouter = require("./routes/account");
 const invitationRouter = require("./routes/invitation");
 const transactionRouter = require("./routes/transaction");
+const groupaccountRouter = require("./routes/group-account");
 const setupDB = require("./db_setup");
 const session = require("express-session");
 const multer = require("multer");
@@ -81,6 +82,7 @@ setupDB()
     app.use("/login", loginRouter);
     app.use("/account", accountRouter);
     app.use("/invitation", invitationRouter);
+    app.use("/group-account", groupaccountRouter);
     app.use("/account/:id/transactions", transactionRouter);
     https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
