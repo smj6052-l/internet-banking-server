@@ -35,7 +35,7 @@ router.post("/open", async (req, res) => {
   const client_pk = req.session.client.client_pk;
   const { account_name, account_type, account_pw, day_transfer_limit } =
     req.body;
-  const account_balance = 0;
+  const account_balance = 5000;
   const account_reg_date = new Date();
   let account_number;
 
