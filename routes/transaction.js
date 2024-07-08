@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
 const bcrypt = require("bcrypt");
-
+const { verifyClient } = require("../utils/clientVerification");
 // 계좌 인증 및 비밀번호 확인 함수
 const validateAccount = (account_number, account_pw, connection) => {
   return new Promise((resolve, reject) => {
@@ -56,7 +56,8 @@ router.post("/transfer", async (req, res) => {
   } = req.body;
 
   const mysqldb = req.app.get("mysqldb");
-
+  const sessionClient = req.session.client;
+  console.log(sessionClient);
   if (!mysqldb) {
     return res.status(500).json({ error: "데이터베이스 연결 실패" });
   }
@@ -70,7 +71,11 @@ router.post("/transfer", async (req, res) => {
   }
 
   try {
-    // 목적지 계좌 정보 가져오기
+    const isClientValid = await verifyClient(sessionClient, mysqldb);
+    if (!isClientValid) {
+      return res.status(401).json({ error: "유효하지 않은 사용자입니다." });
+    }
+
     const destinationAccount = await getAccountByNumber(
       transaction_destination,
       mysqldb
@@ -78,7 +83,7 @@ router.post("/transfer", async (req, res) => {
     if (!destinationAccount) {
       return res.status(404).json({ error: "목적지 계좌를 찾을 수 없습니다." });
     }
-    // 원본 계좌와 목적지 계좌 정보 가져오기
+
     const originAccount = await validateAccount(
       transaction_origin,
       account_pw,
@@ -89,10 +94,8 @@ router.post("/transfer", async (req, res) => {
       return res.status(400).json({ error: "잔액이 부족합니다." });
     }
 
-    // 트랜잭션 시작
     await mysqldb.promise().beginTransaction();
 
-    // 원본 계좌 잔액 업데이트
     const updateOriginBalanceQuery =
       "UPDATE Account SET account_balance = account_balance - ? WHERE account_pk = ?";
     await mysqldb
@@ -102,7 +105,6 @@ router.post("/transfer", async (req, res) => {
         originAccount.account_pk,
       ]);
 
-    // 목적지 계좌 잔액 업데이트
     const updateDestinationBalanceQuery =
       "UPDATE Account SET account_balance = account_balance + ? WHERE account_pk = ?";
     await mysqldb
@@ -116,7 +118,7 @@ router.post("/transfer", async (req, res) => {
     const destinationNewBalance =
       parseInt(destinationAccount.account_balance) +
       parseInt(transaction_amount);
-    // 트랜잭션 기록 추가 - 원본 계좌
+
     const insertOriginTransactionQuery = `
         INSERT INTO TransactionHistory (transaction_name, transaction_type, transaction_amount, transaction_balance, transaction_origin, transaction_destination, transaction_memo)
         VALUES (?, ?, ?, ?, ?, ?, ?)`;
@@ -132,7 +134,6 @@ router.post("/transfer", async (req, res) => {
         transaction_origin_memo,
       ]);
 
-    // 트랜잭션 기록 추가 - 목적지 계좌
     const insertDestinationTransactionQuery = `
         INSERT INTO TransactionHistory (transaction_name, transaction_type, transaction_amount, transaction_balance, transaction_origin, transaction_destination, transaction_memo)
         VALUES (?, ?, ?, ?, ?, ?, ?)`;
@@ -148,13 +149,11 @@ router.post("/transfer", async (req, res) => {
         transaction_destination_memo,
       ]);
 
-    // 트랜잭션 커밋
     await mysqldb.promise().commit();
     res.status(200).json({
       message: "이체가 성공적으로 완료되었습니다.",
     });
   } catch (error) {
-    // 트랜잭션 롤백
     await mysqldb.promise().rollback();
     console.error("Transaction failed: ", error.message);
     res.status(500).json({ error: error.message });
@@ -172,6 +171,7 @@ router.post("/import", async (req, res) => {
   } = req.body;
 
   const mysqldb = req.app.get("mysqldb");
+  const sessionClient = req.session.client;
 
   if (!transaction_origin || !transaction_destination || !transaction_amount) {
     return res.status(400).json({ error: "유효하지 않은 입력입니다." });
@@ -188,6 +188,11 @@ router.post("/import", async (req, res) => {
   }
 
   try {
+    const isClientValid = await verifyClient(sessionClient, mysqldb);
+    if (!isClientValid) {
+      return res.status(401).json({ error: "유효하지 않은 사용자입니다." });
+    }
+
     const originAccount = await getAccountByNumber(transaction_origin, mysqldb);
     const destinationAccount = await getAccountByNumber(
       transaction_destination,
@@ -229,8 +234,8 @@ router.post("/import", async (req, res) => {
     await mysqldb
       .promise()
       .query(insertOriginTransactionQuery, [
-        `To ${destinationAccount.account_name}`,
-        "출금",
+        `${destinationAccount.account_name}가져오기`,
+        "출금-가져오기",
         -amount,
         originNewBalance,
         originAccount.account_pk,
@@ -245,7 +250,7 @@ router.post("/import", async (req, res) => {
       .promise()
       .query(insertDestinationTransactionQuery, [
         `From ${originAccount.account_name}`,
-        "입금",
+        "입금-가져오기",
         amount,
         destinationNewBalance,
         originAccount.account_pk,
@@ -268,8 +273,14 @@ router.post("/import", async (req, res) => {
 router.get("/:accountId/:transactionId", async (req, res) => {
   const { accountId, transactionId } = req.params;
   const mysqldb = req.app.get("mysqldb");
+  const sessionClient = req.session.client;
 
   try {
+    const isClientValid = await verifyClient(sessionClient, mysqldb);
+    if (!isClientValid) {
+      return res.status(401).json({ error: "유효하지 않은 사용자입니다." });
+    }
+
     const [results] = await mysqldb
       .promise()
       .query(
@@ -291,9 +302,14 @@ router.get("/:accountId/:transactionId", async (req, res) => {
 router.get("/:accountId", async (req, res) => {
   const { accountId } = req.params;
   const mysqldb = req.app.get("mysqldb");
-  const client_pk = req.session.client.client_pk; // Assuming client's primary key is stored in session
+  const sessionClient = req.session.client;
 
   try {
+    const isClientValid = await verifyClient(sessionClient, mysqldb);
+    if (!isClientValid) {
+      return res.status(401).json({ error: "유효하지 않은 사용자입니다." });
+    }
+
     const [results] = await mysqldb.promise().query(
       `
         SELECT th.*
@@ -314,6 +330,7 @@ router.get("/:accountId", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 router.post("/search", async (req, res) => {
   const { id } = req.params; // 계좌 ID
   const {
@@ -499,7 +516,7 @@ router.post("/:transactionId/memo/update", async (req, res) => {
         "UPDATE TransactionHistory SET transaction_memo = ? WHERE transaction_pk = ?",
         [transaction_memo, transactionId]
       );
-    
+
     res.status(200).json({ message: "메모가 성공적으로 업데이트되었습니다." });
   } catch (err) {
     res.status(500).json({ error: err.message });
