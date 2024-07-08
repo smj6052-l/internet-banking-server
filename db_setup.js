@@ -1,12 +1,12 @@
 const dotenv = require("dotenv").config();
 const mysql = require("mysql2");
+const { v4: uuidv4 } = require("uuid");
 
-let mysqldb;
+let mysqldb, saltDB;
 
 const setup = async () => {
-  // 이미 db 접속 정보가 존재하는 경우 해당 객체를 바로 반환
-  if (mysqldb) {
-    return { mysqldb };
+  if (mysqldb && saltDB) {
+    return { mysqldb, saltDB };
   }
 
   try {
@@ -16,11 +16,19 @@ const setup = async () => {
       password: process.env.MYSQL_PASSWORD,
       database: process.env.MYSQL_DB,
     });
+    saltDB = mysql.createConnection({
+      host: process.env.MYSQL_HOST,
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_SALT_DB,
+    });
+
     mysqldb.connect();
-    console.log("db 접속 성공");
-    return { mysqldb };
+    saltDB.connect();
+    console.log("DB 접속 성공");
+    return { mysqldb, saltDB };
   } catch (err) {
-    console.log("db 접속 실패");
+    console.log("DB 접속 실패");
     throw err;
   }
 };

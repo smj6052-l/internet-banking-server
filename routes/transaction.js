@@ -69,6 +69,14 @@ router.post("/transfer", async (req, res) => {
   }
 
   try {
+    // 목적지 계좌 정보 가져오기
+    const destinationAccount = await getAccountByNumber(
+      transaction_destination,
+      mysqldb
+    );
+    if (!destinationAccount) {
+      return res.status(400).json({ error: "목적지 계좌를 찾을 수 없습니다." });
+    }
     // 원본 계좌와 목적지 계좌 정보 가져오기
     const originAccount = await validateAccount(
       transaction_origin,
@@ -93,13 +101,6 @@ router.post("/transfer", async (req, res) => {
         originAccount.account_pk,
       ]);
 
-    const destinationAccount = await getAccountByNumber(
-      transaction_destination,
-      mysqldb
-    );
-    if (!destinationAccount) {
-      return res.status(400).json({ error: "목적지 계좌를 찾을 수 없습니다." });
-    }
     // 목적지 계좌 잔액 업데이트
     const updateDestinationBalanceQuery =
       "UPDATE Account SET account_balance = account_balance + ? WHERE account_pk = ?";
