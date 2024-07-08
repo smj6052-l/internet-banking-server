@@ -15,10 +15,10 @@ const validateAccount = (account_number, account_pw, connection) => {
         resolve(account);
         if (account_pw) {
           // 계좌 등록 구현 전 까지 일단 주석 처리
-          //   bcrypt.compare(account_pw, account.account_pw, (err, match) => {
-          //     if (err) return reject(err);
-          //     if (!match) return reject(new Error("잘못된 거래 비밀번호입니다."));
-          //   });
+          bcrypt.compare(account_pw, account.account_pw, (err, match) => {
+            if (err) return reject(err);
+            if (!match) return reject(new Error("잘못된 거래 비밀번호입니다."));
+          });
           resolve(account);
         } else {
           resolve(account);
@@ -97,7 +97,7 @@ router.post("/transfer", async (req, res) => {
     await mysqldb
       .promise()
       .query(updateOriginBalanceQuery, [
-        transaction_amount,
+        parseInt(transaction_amount),
         originAccount.account_pk,
       ]);
 
@@ -107,13 +107,14 @@ router.post("/transfer", async (req, res) => {
     await mysqldb
       .promise()
       .query(updateDestinationBalanceQuery, [
-        transaction_amount,
+        parseInt(transaction_amount),
         destinationAccount.account_pk,
       ]);
     const originNewBalance =
-      parseInt(originAccount.account_balance) - transaction_amount;
+      parseInt(originAccount.account_balance) - parseInt(transaction_amount);
     const destinationNewBalance =
-      parseInt(destinationAccount.account_balance) + transaction_amount;
+      parseInt(destinationAccount.account_balance) +
+      parseInt(transaction_amount);
     // 트랜잭션 기록 추가 - 원본 계좌
     const insertOriginTransactionQuery = `
         INSERT INTO TransactionHistory (transaction_name, transaction_type, transaction_amount, transaction_balance, transaction_origin, transaction_destination, transaction_memo)
@@ -288,7 +289,6 @@ router.get("/:transactionId", async (req, res) => {
 // 입출금 내역 확인
 router.get("/", async (req, res) => {
   const { id } = req.params;
-  console.log(id);
   const mysqldb = req.app.get("mysqldb");
 
   try {
