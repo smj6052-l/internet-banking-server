@@ -37,11 +37,6 @@ router.post("/", async (req, res) => {
   const mysqldb = req.app.get("mysqldb");
   const saltDB = req.app.get("saltDB");
 
-  // 문자열 비교 함수
-  const compare = async (inputId, storedId) => {
-    return inputId === storedId;
-  };
-
   if (!req.session.captchaVerified) {
     return res
       .status(400)
@@ -49,29 +44,16 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // 모든 client_id를 가져옴
+    // Get client data based on client_id
     const [clientRows] = await mysqldb
       .promise()
-      .query("SELECT client_id FROM Client");
-    const matchedClient = await clientRows.find(
-      async (row) => await compare(client_id, row.client_id)
-    );
+      .query("SELECT * FROM Client WHERE client_id = ?", [client_id]);
 
-    if (!matchedClient) {
+    if (clientRows.length === 0) {
       return res.status(400).json({ message: "로그인 실패" });
     }
 
-    const [rows] = await mysqldb
-      .promise()
-      .query("SELECT * FROM Client WHERE client_id = ?", [
-        matchedClient.client_id,
-      ]);
-
-    if (rows.length === 0) {
-      return res.status(400).json({ message: "로그인 실패" });
-    }
-
-    const client = rows[0];
+    const client = clientRows[0];
 
     if (client.client_locked) {
       return res.status(403).json({
@@ -79,11 +61,10 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // Get password salt
     const [saltRows] = await saltDB
       .promise()
-      .query("SELECT * FROM ClientPwSalt WHERE client_id = ?", [
-        matchedClient.client_id,
-      ]);
+      .query("SELECT * FROM ClientPwSalt WHERE client_id = ?", [client_id]);
 
     if (saltRows.length === 0) {
       return res
@@ -94,19 +75,6 @@ router.post("/", async (req, res) => {
     const salt = saltRows[0].pwSalt;
     const hashedPw = sha256(client_pw + salt);
 
-    const [saltRowsSession] = await saltDB
-      .promise()
-      .query("SELECT * FROM SessionSalt WHERE client_id = ?", [
-        matchedClient.client_id,
-      ]);
-
-    if (saltRowsSession.length === 0) {
-      return res
-        .status(500)
-        .json({ message: "내부 서버 오류: 솔트 정보 없음" });
-    }
-
-    const Ssalt = saltRowsSession[0].Ssalt;
     if (client.client_pw !== hashedPw) {
       const loginAttempts = client.client_login_attempts + 1;
       let locked = false;
@@ -119,7 +87,7 @@ router.post("/", async (req, res) => {
         .promise()
         .query(
           "UPDATE Client SET client_login_attempts = ?, client_locked = ? WHERE client_id = ?",
-          [loginAttempts, locked, matchedClient.client_id]
+          [loginAttempts, locked, client_id]
         );
 
       if (locked) {
@@ -131,12 +99,25 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // Reset login attempts upon successful login
     await mysqldb
       .promise()
       .query(
         "UPDATE Client SET client_login_attempts = 0, client_locked = false WHERE client_id = ?",
-        [matchedClient.client_id]
+        [client_id]
       );
+
+    const [saltRowsSession] = await saltDB
+      .promise()
+      .query("SELECT * FROM SessionSalt WHERE client_id = ?", [client_id]);
+
+    if (saltRowsSession.length === 0) {
+      return res
+        .status(500)
+        .json({ message: "내부 서버 오류: 세션 솔트 정보 없음" });
+    }
+
+    const Ssalt = saltRowsSession[0].Ssalt;
 
     req.session.client = {
       client_pk: client.client_pk,

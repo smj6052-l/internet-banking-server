@@ -290,21 +290,25 @@ router.get("/:accountId/:transactionId", async (req, res) => {
 router.get("/:accountId", async (req, res) => {
   const { accountId } = req.params;
   const mysqldb = req.app.get("mysqldb");
+  const client_pk = req.session.client.client_pk; // Assuming client's primary key is stored in session
 
   try {
-    const [results] = await mysqldb
-      .promise()
-      .query(
-        "SELECT * FROM TransactionHistory WHERE transaction_origin = ? OR transaction_destination = ? ORDER BY transaction_date DESC",
-        [accountId, accountId]
-      );
+    const [results] = await mysqldb.promise().query(
+      `
+        SELECT th.*
+        FROM TransactionHistory th
+        JOIN Account a ON th.transaction_origin = a.account_pk OR th.transaction_destination = a.account_pk
+        WHERE a.account_pk = ? AND a.client_pk = ?
+        ORDER BY th.transaction_date DESC
+        `,
+      [accountId, client_pk]
+    );
 
     res.status(200).json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 router.post("/search", async (req, res) => {
   const { id } = req.params; // 계좌 ID
   const {
