@@ -5,27 +5,6 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const router = express.Router();
 
-const algorithm = "aes-256-cbc";
-const key = crypto.randomBytes(32);
-const iv = crypto.randomBytes(16);
-
-const encrypt = (text) => {
-  let cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);
-  let encrypted = cipher.update(text);
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString("hex") + ":" + encrypted.toString("hex");
-};
-
-const decrypt = (text) => {
-  let textParts = text.split(":");
-  let iv = Buffer.from(textParts.shift(), "hex");
-  let encryptedText = Buffer.from(textParts.join(":"), "hex");
-  let decipher = crypto.createDecipheriv(algorithm, Buffer.from(key), iv);
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  return decrypted.toString();
-};
-
 router.post("/verify-captcha", async (req, res) => {
   const { token } = req.body;
   const recaptchaSecret = process.env.reCAPTCHA_SECRET_KEY;
@@ -58,6 +37,11 @@ router.post("/", async (req, res) => {
   const mysqldb = req.app.get("mysqldb");
   const saltDB = req.app.get("saltDB");
 
+  // 문자열 비교 함수
+  const compare = async (inputId, storedId) => {
+    return inputId === storedId;
+  };
+
   if (!req.session.captchaVerified) {
     return res
       .status(400)
@@ -70,7 +54,7 @@ router.post("/", async (req, res) => {
       .promise()
       .query("SELECT client_id FROM Client");
     const matchedClient = await clientRows.find(
-      async (row) => await bcrypt.compare(client_id, row.client_id)
+      async (row) => await compare(client_id, row.client_id)
     );
 
     if (!matchedClient) {
@@ -110,6 +94,19 @@ router.post("/", async (req, res) => {
     const salt = saltRows[0].pwSalt;
     const hashedPw = sha256(client_pw + salt);
 
+    const [saltRowsSession] = await saltDB
+      .promise()
+      .query("SELECT * FROM SessionSalt WHERE client_id = ?", [
+        matchedClient.client_id,
+      ]);
+
+    if (saltRowsSession.length === 0) {
+      return res
+        .status(500)
+        .json({ message: "내부 서버 오류: 솔트 정보 없음" });
+    }
+
+    const Ssalt = saltRowsSession[0].Ssalt;
     if (client.client_pw !== hashedPw) {
       const loginAttempts = client.client_login_attempts + 1;
       let locked = false;
@@ -142,9 +139,10 @@ router.post("/", async (req, res) => {
       );
 
     req.session.client = {
-      client_pk: encrypt(client.client_pk.toString()),
-      client_id: encrypt(client.client_id),
-      client_pw: encrypt(client.client_pw),
+      client_pk: client.client_pk,
+      client_id: sha256(client.client_id + Ssalt),
+      client_pw: sha256(client.client_pw + Ssalt),
+      client_name: client.client_name,
     };
 
     return res.status(200).json({ message: "로그인 성공" });
