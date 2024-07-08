@@ -6,6 +6,7 @@ const loginRouter = require("./routes/login");
 const accountRouter = require("./routes/account");
 const invitationRouter = require("./routes/invitation");
 const transactionRouter = require("./routes/transaction");
+const groupaccountRouter = require("./routes/group-account");
 const profileRouter = require("./routes/profile"); // 추가된 라우트
 const setupDB = require("./db_setup");
 const session = require("express-session");
@@ -60,6 +61,7 @@ setupDB()
     app.use("/login", loginRouter);
     app.use("/account", accountRouter);
     app.use("/invitation", invitationRouter);
+    app.use("/group-account", groupaccountRouter);
     app.use("/account/:id/transactions", transactionRouter);
     app.use("/profile", profileRouter); // 추가된 라우트
     https.createServer(options, app).listen(PORT, () => {
