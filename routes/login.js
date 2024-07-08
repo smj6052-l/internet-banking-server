@@ -23,9 +23,12 @@ router.post("/verify-captcha", async (req, res) => {
     }
 
     req.session.captchaVerified = true; // 캡챠 인증 성공 표시
-    return res.status(200).json({ message: "캡챠 인증에 성공하였습니다." });
+    return res
+      .clearCookie("connect.sid")
+      .status(200)
+      .json({ message: "캡챠 인증에 성공하였습니다." });
   } catch (error) {
-    return res.status(500).json({
+    return res.clearCookie("connect.sid").status(500).json({
       message: "캡챠 인증 오류가 발생하였습니다.",
       error: error.message,
     });
@@ -126,17 +129,20 @@ router.post("/", async (req, res) => {
       client_name: client.client_name,
     };
 
-    return res.status(200).json({ message: "로그인 성공" });
-  } catch (error) {
+    delete req.session.captchaVerified;
+
     return res
+      .clearCookie("_GRECAPTCHA")
+      .status(200)
+      .json({ message: "로그인 성공" });
+  } catch (error) {
+    req.session.destroy();
+    delete req.session.captchaVerified;
+
+    return res
+      .clearCookie("connect")
       .status(500)
       .json({ message: "내부 서버 오류", error: error.message });
-  } finally {
-    if (req.session && !req.session.client) {
-      req.session.destroy();
-    } else {
-      delete req.session.captchaVerified;
-    }
   }
 });
 

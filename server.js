@@ -10,6 +10,7 @@ const groupaccountRouter = require("./routes/group-account");
 const profileRouter = require("./routes/profile"); // 추가된 라우트
 const setupDB = require("./db_setup");
 const session = require("express-session");
+const authMiddleware = require("./middlewares/auth"); // auth middleware 추가
 
 const path = require("path");
 const cors = require("cors");
@@ -57,13 +58,13 @@ setupDB()
   .then(({ mysqldb, saltDB }) => {
     app.set("mysqldb", mysqldb);
     app.set("saltDB", saltDB);
-    app.use("/signup", signupRouter);
-    app.use("/login", loginRouter);
-    app.use("/account", accountRouter);
-    app.use("/invitation", invitationRouter);
-    app.use("/group-account", groupaccountRouter);
-    app.use("/transaction", transactionRouter);
-    app.use("/profile", profileRouter); // 추가된 라우트
+    app.use("/signup", signupRouter); // destroySession middleware 적용
+    app.use("/login", loginRouter); // destroySession middleware 적용
+    app.use("/account", authMiddleware, accountRouter); // authMiddleware 적용
+    app.use("/invitation", authMiddleware, invitationRouter); // authMiddleware 적용
+    app.use("/group-account", authMiddleware, groupaccountRouter); // authMiddleware 적용
+    app.use("/transaction", authMiddleware, transactionRouter); // authMiddleware 적용
+    app.use("/profile", authMiddleware, profileRouter); // authMiddleware 적용
     https.createServer(options, app).listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
