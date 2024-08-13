@@ -1,7 +1,6 @@
 const express = require("express");
 const sha256 = require("sha256");
 const axios = require("axios");
-const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const router = express.Router();
 
