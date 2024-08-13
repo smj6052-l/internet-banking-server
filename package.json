@@ -4,6 +4,7 @@
   "description": "인터넷 뱅킹 프로젝트 서버",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
