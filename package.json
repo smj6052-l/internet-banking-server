@@ -10,7 +10,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@google-cloud/recaptcha-enterprise": "^5.10.0",
     "axios": "^1.7.2",
