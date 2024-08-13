@@ -19,8 +19,6 @@ const cors = require("cors");
 const https = require("https");
 const fs = require("fs");
 
-dotenv.config();
-
 // SSL 인증서와 키 파일 읽기
 const options = {
   key: fs.readFileSync("server.key"),
