@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
-const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const { verifyClient } = require("../utils/clientVerification");
 // 계좌 인증 및 비밀번호 확인 함수
 const validateAccount = (account_number, account_pw, connection) => {
@@ -12,17 +12,18 @@ const validateAccount = (account_number, account_pw, connection) => {
         if (error) return reject(error);
         const account = results[0];
         if (!account) return reject(new Error("계좌를 찾을 수 없습니다."));
-        resolve(account);
+
         if (account_pw) {
-          // 계좌 등록 구현 전 까지 일단 주석 처리
-          bcrypt.compare(account_pw, account.account_pw, (err, match) => {
-            if (err) return reject(err);
-            if (!match) return reject(new Error("잘못된 거래 비밀번호입니다."));
-          });
-          resolve(account);
-        } else {
-          resolve(account);
+          const hashedPassword = crypto
+            .createHash("sha256")
+            .update(account_pw)
+            .digest("hex");
+
+          if (hashedPassword !== account.account_pw) {
+            return reject(new Error("잘못된 거래 비밀번호입니다."));
+          }
         }
+        resolve(account);
       }
     );
   });
