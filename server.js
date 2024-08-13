@@ -1,23 +1,23 @@
-import express from "express";
-import bodyParser from "body-parser";
-import dotenv from "dotenv";
-import signupRouter from "./routes/signup.js";
-import loginRouter from "./routes/login.js";
-import accountRouter from "./routes/account.js";
-import invitationRouter from "./routes/invitation.js";
-import transactionRouter from "./routes/transaction.js";
-import groupaccountRouter from "./routes/group-account.js";
-import profileRouter from "./routes/profile.js";
-import setupDB from "./db_setup.js";
-import session from "express-session";
-import authMiddleware from "./middlewares/auth.js";
+const express = require("express");
+const bodyParser = require("body-parser");
+const dotenv = require("dotenv").config();
+const signupRouter = require("./routes/signup");
+const loginRouter = require("./routes/login");
+const accountRouter = require("./routes/account");
+const invitationRouter = require("./routes/invitation");
+const transactionRouter = require("./routes/transaction");
+const groupaccountRouter = require("./routes/group-account");
+const profileRouter = require("./routes/profile"); // 추가된 라우트
+const setupDB = require("./db_setup");
+const session = require("express-session");
+const authMiddleware = require("./middlewares/auth"); // auth middleware 추가
 
-import path from "path";
-import cors from "cors";
+const path = require("path");
+const cors = require("cors");
 
 // https 설정
-import https from "https";
-import fs from "fs";
+const https = require("https");
+const fs = require("fs");
 
 dotenv.config();
 
