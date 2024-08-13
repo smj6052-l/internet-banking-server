@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const bcrypt = require("bcrypt"); // sha256 사용할 예정이라 사용안해도 됨 임시로 적용.
+const crypto = require("crypto"); // bcrypt 대신 crypto를 사용
 const dotenv = require("dotenv");
 const { validationResult } = require("express-validator");
 
@@ -45,8 +45,11 @@ router.post("/open", async (req, res) => {
 
     // 계좌 번호 생성
     account_number = await generateAccountNumber(mysqldb);
-    // 계좌 비밀번호 해싱
-    const hashedPassword = await bcrypt.hash(account_pw, 10);
+    // 계좌 비밀번호 해싱 (sha256 사용)
+    const hashedPassword = crypto
+      .createHash("sha256")
+      .update(account_pw)
+      .digest("hex");
 
     // 새 계좌 데이터 삽입
     const [result] = await mysqldb
