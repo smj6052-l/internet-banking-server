@@ -1,6 +1,5 @@
 const express = require("express");
 const sha256 = require("sha256");
-const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { sendEmail } = require("../utils/email");
 const { checkId, verifyEmailCode } = require("../utils/validation");
