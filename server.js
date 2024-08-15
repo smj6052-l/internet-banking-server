@@ -47,7 +47,7 @@ app.use(
   })
 );
 const corsOptions = {
-  origin: "https://localhost:5173",
+  origin: "http://likelionteam6.mooo.com:33035",
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
 };
