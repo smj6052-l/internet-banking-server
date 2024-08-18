@@ -47,6 +47,7 @@ router.post("/send-verification-code", async (req, res) => {
   try {
     await sendEmail(client_email, subject, text, null);
     req.session.verificationCode = verificationCode;
+    console.log("Stored verificationCode in session:", req.session.verificationCode); // 로그 추가 ***삭제
     return res
       .status(200)
       .json({ message: "입력하신 이메일로 인증코드가 전송되었습니다." });
@@ -61,6 +62,7 @@ router.post("/send-verification-code", async (req, res) => {
 
 // 이메일 인증 코드 확인
 router.post("/verify-email-code", (req, res) => {
+  console.log("Session verificationCode:", req.session.verificationCode); // 로그 추가 ***삭제
   const { verificationCode } = req.body;
   const sessionVerificationCode = req.session.verificationCode;
 
