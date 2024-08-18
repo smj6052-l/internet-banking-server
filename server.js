@@ -37,7 +37,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      //domain: "likelionteam6.mooo.com",
+      domain: "likelionteam6.mooo.com",
       path: "/",
       httpOnly: true,
       sameSite: "None",
