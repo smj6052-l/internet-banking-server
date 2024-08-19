@@ -41,7 +41,7 @@ app.use(
   })
 );
 const corsOptions = {
-  origin: "http://likelionteam6.mooo.com:33035",
+  origin: "http://frontend-server:8000",
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
 };
