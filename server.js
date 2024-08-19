@@ -31,7 +31,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      //domain: "likelionteam6.mooo.com",
+      domain: "likelionteam6.mooo.com",
       path: "/",
       httpOnly: true,
       sameSite: "None",
@@ -41,7 +41,7 @@ app.use(
   })
 );
 const corsOptions = {
-  origin: "http://frontend-server:8000",
+  origin: "http://likelionteam6.mooo.com:8000",
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
 };
