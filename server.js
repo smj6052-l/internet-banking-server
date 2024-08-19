@@ -35,7 +35,7 @@ app.use(
       //domain: "likelionteam6.mooo.com",
       path: "/",
       httpOnly: true,
-      sameSite: "None",
+      sameSite: "Nax",
       maxAge: 5400000,
       secure: false,
     },
